@@ -1,0 +1,54 @@
+# For advice on how to change settings please see
+# http://dev.mysql.com/doc/refman/5.6/en/server-configuration-defaults.html
+
+[mysqld]
+#
+# Remove leading # to turn on a very important data integrity option: logging
+# changes to the binary log between backups.
+# log_bin
+#
+# Remove leading # to set options mainly useful for reporting servers.
+# The server defaults are faster for transactions and fast SELECTs.
+# Adjust sizes as needed, experiment to find the optimal values.
+# join_buffer_size = 128M
+sort_buffer_size = {{SORT_BUFFER_SIZE}}
+# read_rnd_buffer_size = 2M
+
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links=0
+
+# Recommended in standard MySQL setup
+sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
+
+slow-query-log = 1
+slow_query_log_file = /var/log/mysql-slow.log
+long_query_time = {{SLOW_QUERY_TIME}}
+
+# total = innodb_buffer_pool_size + key_buffer_size +
+# innodb_additional_mem_pool_size + innodb_log_buffer_size +
+# max_connections * (sort_buffer_size + read_buffer_size + binlog_cache_size +
+# maximum_thread_stack_size);
+
+max_connections = {{MAX_CONNECTIONS}}
+
+#
+# Remove leading # and set to the amount of RAM for the most important data
+# cache in MySQL. Start at 70% of total RAM for dedicated server, else 10%.
+innodb_buffer_pool_size = {{INNODB_BUFFER_POOL_SIZE}}
+innodb_log_buffer_size = {{INNODB_LOG_BUFFER_SIZE}}
+innodb_buffer_pool_instances = {{INNODB_BUFFER_POOL_INSTANCES}}
+innodb_additional_mem_pool_size = {{INNODB_MEMORY_POOL_DICT}}
+innodb_data_file_path = {{INNODB_DATA_FILES}}
+innodb_autoextend_increment = {{INNODB_AUTOEXTEND_SIZE}}
+
+#
+# MyISAM
+key_buffer_size = {{MYISAM_KEY_BUFFER_SIZE}}
+read_buffer_size = {{MYISAM_READ_BUFFER_SIZE}}
+
+[mysqld_safe]
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
