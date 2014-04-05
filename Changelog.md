@@ -1,6 +1,4 @@
 # Changelog
 
-**6.5**
- - CentOS 6.5
- - EPEL repository
- - Some useful tools pre installed.
+**5.6.17**
+ - MySQL 5.6.17
