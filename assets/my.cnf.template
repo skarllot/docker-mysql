@@ -2,10 +2,33 @@
 # http://dev.mysql.com/doc/refman/5.6/en/server-configuration-defaults.html
 
 [mysqld]
-#
-# Remove leading # to turn on a very important data integrity option: logging
-# changes to the binary log between backups.
-# log_bin
+# GENERAL
+user = mysql
+default-storage-engine = InnoDB
+socket = /var/lib/mysql/mysql.sock
+
+# MyISAM
+key_buffer_size = {{MYISAM_KEY_BUFFER_SIZE}}
+read_buffer_size = {{MYISAM_READ_BUFFER_SIZE}}
+myisam-recover-options = FORCE,BACKUP
+
+# SAFETY
+max_allowed_packet = 16M
+skip-name-resolve
+sql-mode = 'STRICT_TRANS_TABLES, ERROR_FOR_DIVISION_BY_ZERO, NO_AUTO_CREATE_USER, NO_AUTO_VALUE_ON_ZERO, NO_ENGINE_SUBSTITUTION, NO_ZERO_DATE, NO_ZERO_IN_DATE, ONLY_FULL_GROUP_BY'
+innodb_strict_mode = 1
+
+# DATA STORAGE
+datadir=/var/lib/mysql
+
+# BINARY LOGGING
+# log_bin = {{BINLOG_BASENAME}}
+# expire_logs_days = {{BINLOG_EXPIRE_DAYS}}
+# binlog_cache_size = {{BINLOG_CACHE_SIZE}}
+# sync_binlog = {{BINLOG_SYNC}}
+
+# CACHE AND LIMITS
+
 #
 # Remove leading # to set options mainly useful for reporting servers.
 # The server defaults are faster for transactions and fast SELECTs.
@@ -13,9 +36,8 @@
 # join_buffer_size = 128M
 sort_buffer_size = {{SORT_BUFFER_SIZE}}
 # read_rnd_buffer_size = 2M
+thread_stack = {{THREAD_STACK}}
 
-datadir=/var/lib/mysql
-socket=/var/lib/mysql/mysql.sock
 
 # Disabling symbolic-links is recommended to prevent assorted security risks
 symbolic-links=0
@@ -30,7 +52,7 @@ long_query_time = {{SLOW_QUERY_TIME}}
 # total = innodb_buffer_pool_size + key_buffer_size +
 # innodb_additional_mem_pool_size + innodb_log_buffer_size +
 # max_connections * (sort_buffer_size + read_buffer_size + binlog_cache_size +
-# maximum_thread_stack_size);
+# thread_stack);
 
 max_connections = {{MAX_CONNECTIONS}}
 
@@ -45,9 +67,9 @@ innodb_data_file_path = {{INNODB_DATA_FILES}}
 innodb_autoextend_increment = {{INNODB_AUTOEXTEND_SIZE}}
 
 #
-# MyISAM
-key_buffer_size = {{MYISAM_KEY_BUFFER_SIZE}}
-read_buffer_size = {{MYISAM_READ_BUFFER_SIZE}}
+# Remove leading # to turn on a very important data integrity option: logging
+# changes to the binary log between backups.
+
 
 [mysqld_safe]
 log-error=/var/log/mysqld.log

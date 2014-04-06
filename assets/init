@@ -3,31 +3,35 @@
 set -e
 
 CONFIG_DIR="/root/config"
-CONFIG_MYCNF="${CONFIG_DIR}/my.cnf.template"
-MYCNF_TEMPLATE="/etc/my.cnf.template"
+DATA_DIR="/var/lib/mysql"
+TEMPLATES_DIR="$CONFIG_DIR/templates"
+MYCNF_TEMPLATE="${CONFIG_DIR}/my.cnf.template"
 MYCNF_DEFAULT="/etc/my.cnf"
+MYCNF_BACKUP="${DATA_DIR}/my.cnf"
 
-SORT_BUFFER_SIZE=${SORT_BUFFER_SIZE:-2M}
+CONFIG_TEMPLATE=${CONFIG_TEMPLATE:-default}
 
-SLOW_QUERY_TIME=${SLOW_QUERY_TIME:-10}
-MAX_CONNECTIONS=${MAX_CONNECTIONS:-96}
+create () {
+    if [ $(ls $DATA_DIR | wc -l) -ne 0 ]; then
+        echo "The MySQL data directory is not empty" >&2
+        echo "Probably the database is already created" >&2
+        exit 1
+    fi
 
-INNODB_BUFFER_POOL_SIZE=${INNODB_BUFFER_POOL_SIZE:-256M}
-INNODB_LOG_BUFFER_SIZE=${INNODB_LOG_BUFFER_SIZE:-16M}
-INNODB_BUFFER_POOL_INSTANCES=${INNODB_BUFFER_POOL_INSTANCES:-2}
-INNODB_MEMORY_POOL_DICT=${INNODB_MEMORY_POOL_DICT:-16M}
-INNODB_DATA_FILES=${INNODB_DATA_FILES:-ibdata1:512M:autoextend}
-INNODB_AUTOEXTEND_SIZE=${INNODB_AUTOEXTEND_SIZE:-128}
-
-MYISAM_KEY_BUFFER_SIZE=${MYISAM_KEY_BUFFER_SIZE:-4M}
-MYISAM_READ_BUFFER_SIZE=${MYISAM_READ_BUFFER_SIZE:-1M}
-
-
-if [ ! -f $MYCNF_TEMPLATE ]; then
-    cp ${CONFIG_MYCNF} ${MYCNF_TEMPLATE}
     cat ${MYCNF_TEMPLATE} >${MYCNF_DEFAULT}
 
+    # Load configuration template
+    CONF_TEMPLATE_FILE="${TEMPLATES_DIR}/${CONFIG_TEMPLATE}.sh"
+    if [ ! -f $CONF_TEMPLATE_FILE ]; then
+        echo "The specified configuration template name is invalid" >&2
+        exit 1
+    fi
+
+    source $CONF_TEMPLATE_FILE
+    trap "rm -rf $MYCNF_DEFAULT" EXIT
+
     sed 's/{{SORT_BUFFER_SIZE}}/'${SORT_BUFFER_SIZE}'/' -i ${MYCNF_DEFAULT}
+    sed 's/{{THREAD_STACK}}/'${THREAD_STACK}'/' -i ${MYCNF_DEFAULT}
 
     sed 's/{{SLOW_QUERY_TIME}}/'${SLOW_QUERY_TIME}'/' -i ${MYCNF_DEFAULT}
     sed 's/{{MAX_CONNECTIONS}}/'${MAX_CONNECTIONS}'/' -i ${MYCNF_DEFAULT}
@@ -41,6 +45,64 @@ if [ ! -f $MYCNF_TEMPLATE ]; then
 
     sed 's/{{MYISAM_KEY_BUFFER_SIZE}}/'${MYISAM_KEY_BUFFER_SIZE}'/' -i ${MYCNF_DEFAULT}
     sed 's/{{MYISAM_READ_BUFFER_SIZE}}/'${MYISAM_READ_BUFFER_SIZE}'/' -i ${MYCNF_DEFAULT}
-fi
+
+    if [ $BINLOG_ENABLE -eq 1 ]; then
+        sed 's/# log_bin/log_bin/' -i ${MYCNF_DEFAULT}
+        set 's/# expire_logs_days/expire_logs_days/' -i ${MYCNF_DEFAULT}
+        sed 's/# binlog_cache_size/binlog_cache_size/' -i ${MYCNF_DEFAULT}
+        sed 's/# sync_binlog/sync_binlog/' -i ${MYCNF_DEFAULT}
+    fi
+    sed 's/{{BINLOG_BASENAME}}/'${BINLOG_BASENAME}'/' -i ${MYCNF_DEFAULT}
+    sed 's/{{BINLOG_EXPIRE_DAYS}}/'${BINLOG_EXPIRE_DAYS}'/' -i ${MYCNF_DEFAULT}
+    sed 's/{{BINLOG_CACHE_SIZE}}/'${BINLOG_CACHE_SIZE}'/' -i ${MYCNF_DEFAULT}
+    sed 's/{{BINLOG_SYNC}}/'${BINLOG_SYNC}'/' -i ${MYCNF_DEFAULT}
+
+    cp ${MYCNF_DEFAULT} ${MYCNF_BACKUP}
+}
+
+start () {
+    if [ $(ls $DATA_DIR | wc -l) -eq 0 ]; then
+        echo "The MySQL data directory is empty" >&2
+        echo "You must create the database before starting it" >&2
+        exit 1
+    fi
+
+    cp ${MYCNF_BACKUP} ${MYCNF_DEFAULT}
+}
+
+showHelp () {
+    echo "Available options:"
+    echo " create           - Creates a MySQL database"
+    echo " start            - Start the MySQL server (default)"
+    echo " help             - Display this help"
+    echo " [command]        - Execute the specified command (eg: bash)"
+}
+
+case "$1" in
+    create)
+        create
+        ;;
+    start)
+        start
+        ;;
+    help)
+        showHelp
+        ;;
+    *)
+        if [ -x $1 ]; then
+            $1
+        else
+            prog=$(which $1)
+            if [ -n "$prog" ]; then
+                shift 1
+                $prog $@
+            else
+                showHelp
+            fi
+        fi
+        ;;
+esac
+
+exit 0
 
 # vim: set ts=4 et

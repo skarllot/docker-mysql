@@ -14,6 +14,7 @@ ADD assets/ /root/config/
 
 EXPOSE 3306
 
+USER mysql
 ENTRYPOINT ["/root/config/init"]
 CMD ["start"]
 
